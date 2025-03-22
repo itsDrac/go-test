@@ -4,38 +4,72 @@ import (
 	"context"
 	"log"
 	"time"
+
+	"github.com/InstaUpload/user-management/store/db"
+	"github.com/InstaUpload/user-management/types"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/testcontainers/testcontainers-go"
+	tcpg "github.com/testcontainers/testcontainers-go/modules/postgres"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func getMockStore() Store {
+func CreateMockStore(dbConfig *types.DatabaseConfig) Store {
+	ctx := context.Background()
+	// Create database Test container.
+	container := createPostgresContainer(ctx, dbConfig)
+	connectionString, err := container.ConnectionString(ctx, "sslmode=disable")
+	if err != nil {
+		log.Printf("Error in getting connection string: %v", err)
+	}
+	log.Printf("connection string %s", connectionString)
+	// Using the connection string create database/sql store.
+	dbConfig.SetConnectionString(connectionString)
+	db, err := db.New(dbConfig)
+	if err != nil {
+		log.Printf("Error in connecting to test database %v", err)
+	}
+	log.Printf("test Database connected")
+	// Do migrations in the database.
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://./migrations",
+		"postgres", driver)
+	m.Up()
+	// To be removed when debuging is completed.
+	// defer killPostgresContainer(container)
+	// defer db.Close()
+	return NewStore(db)
+
 }
 
-// Add a functiuon to create a mock database using test containers
-func CreateMockDatabase(dbConfig *databaseConfig) *PostgresContainer {
-	log.Printf("This function was called")
+// Function to run when test are over.
+func killPostgresContainer(container *tcpg.PostgresContainer) {
+	if err := testcontainers.TerminateContainer(container); err != nil {
+		log.Printf("failed to terminate container: %s", err)
+	}
+}
+
+func createPostgresContainer(ctx context.Context, dbConfig *types.DatabaseConfig) *tcpg.PostgresContainer {
 	// Create a new postgres test container.
-	ctx := context.Background()
-	dbName := "users"
-	dbUser := "user"
-	dbPassword := "password"
-	postgresContainer, err := postgres.Run(ctx,
+	dbName := dbConfig.Name
+	dbUser := dbConfig.User
+	dbPassword := dbConfig.Password
+	postgresContainer, err := tcpg.Run(ctx,
 		"postgres:16-alpine",
-		postgres.WithDatabase(dbName),
-		postgres.WithUsername(dbUser),
-		postgres.WithPassword(dbPassword),
+		tcpg.WithDatabase(dbName),
+		tcpg.WithUsername(dbUser),
+		tcpg.WithPassword(dbPassword),
+		testcontainers.WithHostPortAccess(5432),
 		testcontainers.WithWaitStrategy(
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).
 				WithStartupTimeout(5*time.Second)),
 	)
-	defer func() {
-		if err := testcontainers.TerminateContainer(postgresContainer); err != nil {
-			log.Printf("Test Container Deref function called")
-			log.Printf("failed to terminate container: %s", err)
-		}
-	}()
 	if err != nil {
 		log.Printf("failed to start container: %s", err)
-		return
+		return nil
 	}
 	return postgresContainer
 }

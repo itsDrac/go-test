@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 type UserStore struct {
@@ -19,7 +20,7 @@ type User struct {
 	Email      string    `json:"email"`
 	Password   password  `json:"-"`
 	isVerified bool      `json:"is_verified"`
-	CreatedAt  Time.Date `json:"created_at"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 func (s *UserStore) Create(ctx context.Context, tx *sql.Tx, user *User) (*User, error) {
