@@ -15,39 +15,49 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func CreateMockStore(dbConfig *types.DatabaseConfig) Store {
+func CreateMockStore(dbConfig *types.DatabaseConfig) (Store, error) {
 	ctx := context.Background()
 	// Create database Test container.
 	container := createPostgresContainer(ctx, dbConfig)
 	connectionString, err := container.ConnectionString(ctx, "sslmode=disable")
 	if err != nil {
-		log.Printf("Error in getting connection string: %v", err)
+		log.Fatalf("Error in getting connection string: %v", err)
+		return nil, err
 	}
 	log.Printf("connection string %s", connectionString)
 	// Using the connection string create database/sql store.
 	dbConfig.SetConnectionString(connectionString)
 	db, err := db.New(dbConfig)
 	if err != nil {
-		log.Printf("Error in connecting to test database %v", err)
+		log.Fatalf("Error in connecting to test database %v", err)
+		return nil, err
 	}
 	log.Printf("test Database connected")
 	// Do migrations in the database.
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		log.Fatalf("Error in setting up migration driver. %v", err)
+		return nil, err
+	}
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://./migrations",
 		"postgres", driver)
+	if err != nil {
+		log.Fatalf("Error in migrating %v", err)
+		return nil, err
+	}
 	m.Up()
 	// To be removed when debuging is completed.
 	// defer killPostgresContainer(container)
 	// defer db.Close()
-	return NewStore(db)
+	return NewStore(db), nil
 
 }
 
 // Function to run when test are over.
-func killPostgresContainer(container *tcpg.PostgresContainer) {
+func KillPostgresContainer(container *tcpg.PostgresContainer) {
 	if err := testcontainers.TerminateContainer(container); err != nil {
-		log.Printf("failed to terminate container: %s", err)
+		log.Fatalf("failed to terminate container: %s", err)
 	}
 }
 
