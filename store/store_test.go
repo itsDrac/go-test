@@ -1,15 +1,19 @@
 package store
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"testing"
 
+	"github.com/InstaUpload/user-management/store/database"
 	"github.com/InstaUpload/user-management/types"
 	"github.com/InstaUpload/user-management/utils"
 	"github.com/joho/godotenv"
 )
+
+var mockStore Store
 
 func TestMain(m *testing.M) {
 	err := godotenv.Load()
@@ -25,14 +29,27 @@ func TestMain(m *testing.M) {
 		MaxIdleConns: utils.GetEnvInt("TESTDATABASEIDLECONNS", 5),
 		MaxIdleTime:  utils.GetEnvString("TESTDATABASEIDLETIME", "1m"),
 	}
-	mockStore, err := CreateMockDatabase(testDbConfig)
+	ctx := context.Background()
+	container, err := database.CreatePostgresContainer(ctx, &testDbConfig)
 	if err != nil {
-		log.Fatalf("Error creating mock database %v", err)
+		log.Fatalf("Can not create postgres container")
+		return
 	}
+	connectionString, err := container.ConnectionString(ctx, "sslmode=disable")
+	if err != nil {
+		log.Fatalf("Error in getting connection string: %v", err)
+		return
+	}
+	log.Printf("connection string %s", connectionString)
+	testDbConfig.SetConnectionString(connectionString)
+	db, err := database.New(&testDbConfig)
+	if err != nil {
+		log.Fatalf("Can not create new database")
+	}
+	database.Setup(db)
+	mockStore = NewStore(db)
 	exitCode := m.Run()
-	KillPostgresContainer()
+	database.KillPostgresContainer(container)
 	os.Exit(exitCode)
 
 }
-
-// Should I create a function to test all the interface of Store?

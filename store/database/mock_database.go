@@ -1,11 +1,11 @@
-package store
+package database
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"time"
 
-	"github.com/InstaUpload/user-management/store/db"
 	"github.com/InstaUpload/user-management/types"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -15,43 +15,22 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func CreateMockStore(dbConfig *types.DatabaseConfig) (Store, error) {
-	ctx := context.Background()
-	// Create database Test container.
-	container := createPostgresContainer(ctx, dbConfig)
-	connectionString, err := container.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		log.Fatalf("Error in getting connection string: %v", err)
-		return nil, err
-	}
-	log.Printf("connection string %s", connectionString)
-	// Using the connection string create database/sql store.
-	dbConfig.SetConnectionString(connectionString)
-	db, err := db.New(dbConfig)
-	if err != nil {
-		log.Fatalf("Error in connecting to test database %v", err)
-		return nil, err
-	}
-	log.Printf("test Database connected")
+func Setup(db *sql.DB) error {
 	// Do migrations in the database.
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		log.Fatalf("Error in setting up migration driver. %v", err)
-		return nil, err
+		return err
 	}
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://./migrations",
 		"postgres", driver)
 	if err != nil {
 		log.Fatalf("Error in migrating %v", err)
-		return nil, err
+		return err
 	}
 	m.Up()
-	// To be removed when debuging is completed.
-	// defer killPostgresContainer(container)
-	// defer db.Close()
-	return NewStore(db), nil
-
+	return nil
 }
 
 // Function to run when test are over.
@@ -61,7 +40,7 @@ func KillPostgresContainer(container *tcpg.PostgresContainer) {
 	}
 }
 
-func createPostgresContainer(ctx context.Context, dbConfig *types.DatabaseConfig) *tcpg.PostgresContainer {
+func CreatePostgresContainer(ctx context.Context, dbConfig *types.DatabaseConfig) (*tcpg.PostgresContainer, error) {
 	// Create a new postgres test container.
 	dbName := dbConfig.Name
 	dbUser := dbConfig.User
@@ -79,7 +58,7 @@ func createPostgresContainer(ctx context.Context, dbConfig *types.DatabaseConfig
 	)
 	if err != nil {
 		log.Printf("failed to start container: %s", err)
-		return nil
+		return nil, err
 	}
-	return postgresContainer
+	return postgresContainer, nil
 }

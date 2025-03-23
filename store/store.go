@@ -9,6 +9,7 @@ type Store struct {
 	User interface {
 		Create(context.Context, *sql.Tx, *User) (*User, error)
 		CreateAndInvite(context.Context, *User) (*User, error)
+		GetStr() string
 	}
 }
 

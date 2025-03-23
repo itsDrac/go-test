@@ -40,3 +40,7 @@ func (s *UserStore) CreateAndInvite(ctx context.Context, user *User) (*User, err
 	// TODO: return pointer to user.
 	return nil, nil
 }
+
+func (s *UserStore) GetStr() string {
+	return "Working"
+}
