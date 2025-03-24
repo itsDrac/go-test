@@ -1,22 +1,21 @@
-package store
+package main
 
 import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"testing"
 
+	"github.com/InstaUpload/user-management/store"
 	"github.com/InstaUpload/user-management/store/database"
 	"github.com/InstaUpload/user-management/types"
 	"github.com/InstaUpload/user-management/utils"
 	"github.com/joho/godotenv"
 )
 
-func PSting() {
-	log.Printf("Store package")
-}
-
-func CreateMockStore() {
-	log.Printf("Store Main function called")
+func TestMain(m *testing.M) {
+	log.Printf("Main function called")
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
@@ -48,9 +47,9 @@ func CreateMockStore() {
 		log.Fatalf("Can not create new database")
 	}
 	database.Setup(db)
-	mockStore = NewStore(db)
-	// exitCode := m.Run()
-	// database.KillPostgresContainer(container)
-	// os.Exit(exitCode)
+	store.MockStore = store.NewStore(db)
+	exitCode := m.Run()
+	database.KillPostgresContainer(container)
+	os.Exit(exitCode)
 
 }
