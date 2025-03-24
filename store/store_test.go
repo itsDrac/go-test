@@ -21,7 +21,7 @@ var MockStore Store
 
 func TestMain(m *testing.M) {
 	log.Printf("Store Main function called")
-	err := godotenv.Load()
+	err := godotenv.Load("../.env")
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}

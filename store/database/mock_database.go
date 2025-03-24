@@ -23,7 +23,7 @@ func Setup(db *sql.DB) error {
 		return err
 	}
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://./migrations",
+		"file://../migrations",
 		"postgres", driver)
 	if err != nil {
 		log.Fatalf("Error in migrating %v", err)

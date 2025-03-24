@@ -12,7 +12,7 @@ func TestCreate(t *testing.T) {
 		// _ := mockStore.User.Create()
 		got := MockStore.User.GetStr()
 		want := "Working"
-		if got == want {
+		if got != want {
 			t.Error("Not Working")
 		}
 	})
