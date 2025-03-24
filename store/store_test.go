@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"testing"
 
 	"github.com/InstaUpload/user-management/store/database"
 	"github.com/InstaUpload/user-management/types"
@@ -15,7 +17,9 @@ func PSting() {
 	log.Printf("Store package")
 }
 
-func CreateMockStore() {
+var MockStore Store
+
+func TestMain(m *testing.M) {
 	log.Printf("Store Main function called")
 	err := godotenv.Load()
 	if err != nil {
@@ -48,9 +52,9 @@ func CreateMockStore() {
 		log.Fatalf("Can not create new database")
 	}
 	database.Setup(db)
-	mockStore = NewStore(db)
-	// exitCode := m.Run()
-	// database.KillPostgresContainer(container)
-	// os.Exit(exitCode)
+	MockStore = NewStore(db)
+	exitCode := m.Run()
+	database.KillPostgresContainer(container)
+	os.Exit(exitCode)
 
 }

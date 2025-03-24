@@ -13,8 +13,6 @@ type Store struct {
 	}
 }
 
-var MockStore Store
-
 func NewStore(db *sql.DB) Store {
 	return Store{
 		User: &UserStore{db},

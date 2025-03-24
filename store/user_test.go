@@ -10,7 +10,7 @@ func TestCreate(t *testing.T) {
 	log.Printf("In user test function")
 	t.Run("Pass Create User", func(t *testing.T) {
 		// _ := mockStore.User.Create()
-		got := mockStore.User.GetStr()
+		got := MockStore.User.GetStr()
 		want := "Working"
 		if got == want {
 			t.Error("Not Working")
